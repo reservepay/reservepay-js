@@ -446,12 +446,12 @@ import { Client } from 'webfunction';
  * @property {string} payment_method - The payment method used (e.g., 'PROMPTPAY', 'CARD').
  * @property {string} payment_method_category - The category of the payment method.
  * @property {string} payment_method_display_name - The display name of the payment method.
- * @property {(string|null)} [card_first_digits] - The first 6 digits of the card number. Null for non-card payment methods or card payments without a token.
- * @property {(string|null)} [card_last_digits] - The last 2 digits of the card number. Null for non-card payment methods or card payments without a token.
- * @property {(string|null)} [card_masked_number] - The card number with the first 6 and last 2 digits visible and the rest masked. Null for non-card payment methods or card payments without a token.
- * @property {(string|null)} [card_network] - The card network, such as visa or mastercard. Null for non-card payment methods or card payments without a token.
- * @property {(string|null)} [cardholder_name] - The cardholder's name as entered on the card. Null for non-card payment methods, card payments without a token, or when no name was entered.
- * @property {(string|null)} [card_expiration_date] - The card's expiration date as captured, usually in MM/YY format. Null for non-card payment methods, card payments without a token, or when no expiration date was captured.
+ * @property {(string|null)} [card_first_digits] - The first 6 digits of the card number. Includes EDC payments, using the card the partner app reports at capture. Null for non-card payment methods or card payments without card details, such as an EDC payment before capture.
+ * @property {(string|null)} [card_last_digits] - The last 2 digits of the card number. Includes EDC payments, using the card the partner app reports at capture. Null for non-card payment methods or card payments without card details, such as an EDC payment before capture.
+ * @property {(string|null)} [card_masked_number] - The card number with the first 6 and last 2 digits visible and the rest masked. Includes EDC payments, using the card the partner app reports at capture. Null for non-card payment methods or card payments without card details, such as an EDC payment before capture.
+ * @property {(string|null)} [card_network] - The card network, such as visa or mastercard. Includes EDC payments, using the card the partner app reports at capture. Null for non-card payment methods or card payments without card details, such as an EDC payment before capture.
+ * @property {(string|null)} [cardholder_name] - The cardholder's name as entered on the card. Null for non-card payment methods, card payments without card details, or when no name was entered. Always null for EDC payments, as the partner app only reports the card number digits.
+ * @property {(string|null)} [card_expiration_date] - The card's expiration date as captured, usually in MM/YY format. Null for non-card payment methods, card payments without card details, or when no expiration date was captured. Always null for EDC payments, as the partner app only reports the card number digits.
  * @property {number} created_at - The creation timestamp (Unix timestamp).
  * @property {(number|null)} [authorized_at] - When the payment was authorized (Unix timestamp).
  * @property {(number|null)} [captured_at] - When the payment was captured (Unix timestamp).
@@ -511,6 +511,7 @@ import { Client } from 'webfunction';
  * @property {string} [amount] - Filter by amount. Supports: exact amount (1000), range (1000..5000), or boundless ranges (1000.. or ..5000). Amounts are in the smallest currency unit (cents for USD).
  * @property {string} [bank_code] - Filter by bank code.
  * @property {string} [contact_id] - Filter by contact ID. Accepts either internal UID (starting with `ctc_` ) or external ID. Examples: `ctc_1234567890` or `ext_1234567890`
+ * @property {string} [batch_id] - Filter by the payout batch that created the payout. Example: `bat_1234567890`
  * @property {string} [terms] - Full-text search across payout content. Searches payout method names. Uses fuzzy matching for partial text matches.
  */
 
@@ -652,11 +653,12 @@ import { Client } from 'webfunction';
  * @typedef {Object} FindBatchResult
  * @property {string} batch_id - The unique identifier of the batch.
  * @property {("PAYMENT_LINK"|"PAYOUT")} type - The type of records in this batch.
- * @property {("CREATED"|"PREPARING"|"PREPARED"|"PROCESSING"|"COMPLETED")} status - The current processing status of the batch.
+ * @property {("CREATED"|"PREPARING"|"PREPARED"|"PROCESSING"|"COMPLETED"|"FAILED")} status - The current processing status of the batch.
  * @property {(string|null)} [output_url] - The URL to download the result xlsx file. Present when the batch has completed.
  * @property {(string|null)} [preview_url] - The URL to download the validated drafts JSON. Included after prepare has completed.
  * @property {(string|null)} [error_message] - The failure reason when prepare or processing did not complete. Included when a background job failed.
  * @property {number} created_at - The timestamp when the batch was created.
+ * @property {boolean} awaiting_authorization - True when any payout in this batch is still in the requested state.
  */
 
 /**
@@ -738,7 +740,9 @@ import { Client } from 'webfunction';
  * @property {number} created_at - The timestamp when the dispute was created.
  * @property {Array<FeeAttributes>} fees - The fees associated with the dispute.
  * @property {(true|false)} conceded - Whether the dispute has been conceded by the merchant. This can be true only when the dispute is in the LOST state.
+ * @property {(true|false)} challenge_fee_waived - Whether the challenge fee is waived for this dispute.
  * @property {Array<DisputeEvidenceAttributes>} evidences - The evidence submitted for this dispute.
+ * @property {Array<EntryAttributes>} entries - The merchant ledger entries associated with this dispute.
  */
 
 /**
@@ -814,12 +818,12 @@ import { Client } from 'webfunction';
  * @property {string} payment_method - The payment method used (e.g., 'PROMPTPAY', 'CARD').
  * @property {string} payment_method_category - The category of the payment method.
  * @property {string} payment_method_display_name - The display name of the payment method.
- * @property {(string|null)} [card_first_digits] - The first 6 digits of the card number. Null for non-card payment methods or card payments without a token.
- * @property {(string|null)} [card_last_digits] - The last 2 digits of the card number. Null for non-card payment methods or card payments without a token.
- * @property {(string|null)} [card_masked_number] - The card number with the first 6 and last 2 digits visible and the rest masked. Null for non-card payment methods or card payments without a token.
- * @property {(string|null)} [card_network] - The card network, such as visa or mastercard. Null for non-card payment methods or card payments without a token.
- * @property {(string|null)} [cardholder_name] - The cardholder's name as entered on the card. Null for non-card payment methods, card payments without a token, or when no name was entered.
- * @property {(string|null)} [card_expiration_date] - The card's expiration date as captured, usually in MM/YY format. Null for non-card payment methods, card payments without a token, or when no expiration date was captured.
+ * @property {(string|null)} [card_first_digits] - The first 6 digits of the card number. Includes EDC payments, using the card the partner app reports at capture. Null for non-card payment methods or card payments without card details, such as an EDC payment before capture.
+ * @property {(string|null)} [card_last_digits] - The last 2 digits of the card number. Includes EDC payments, using the card the partner app reports at capture. Null for non-card payment methods or card payments without card details, such as an EDC payment before capture.
+ * @property {(string|null)} [card_masked_number] - The card number with the first 6 and last 2 digits visible and the rest masked. Includes EDC payments, using the card the partner app reports at capture. Null for non-card payment methods or card payments without card details, such as an EDC payment before capture.
+ * @property {(string|null)} [card_network] - The card network, such as visa or mastercard. Includes EDC payments, using the card the partner app reports at capture. Null for non-card payment methods or card payments without card details, such as an EDC payment before capture.
+ * @property {(string|null)} [cardholder_name] - The cardholder's name as entered on the card. Null for non-card payment methods, card payments without card details, or when no name was entered. Always null for EDC payments, as the partner app only reports the card number digits.
+ * @property {(string|null)} [card_expiration_date] - The card's expiration date as captured, usually in MM/YY format. Null for non-card payment methods, card payments without card details, or when no expiration date was captured. Always null for EDC payments, as the partner app only reports the card number digits.
  * @property {number} created_at - The creation timestamp (Unix timestamp).
  * @property {(number|null)} [authorized_at] - When the payment was authorized (Unix timestamp).
  * @property {(number|null)} [captured_at] - When the payment was captured (Unix timestamp).
@@ -1185,7 +1189,7 @@ import { Client } from 'webfunction';
 
 /**
  * @typedef {Object} ListBatchesArgs
- * @property {("PAYMENT_LINK"|"PAYOUT")} [type] - Filter by batch type. When omitted, all batch types are returned.
+ * @property {("PAYMENT_LINK"|"PAYOUT")} [type] - Filter by batch type. When omitted, every batch type the caller can read is returned.
  * @property {number} [per_page] - Number of batches to return per page (default: 25)
  * @property {string} [after] - Cursor for pagination - return batches created before this batch ID
  * @property {string} [before] - Cursor for pagination - return batches created after this batch ID
@@ -1195,11 +1199,12 @@ import { Client } from 'webfunction';
  * @typedef {Object} BatchAttributes
  * @property {string} batch_id - The unique identifier of the batch.
  * @property {("PAYMENT_LINK"|"PAYOUT")} type - The type of records in this batch.
- * @property {("CREATED"|"PREPARING"|"PREPARED"|"PROCESSING"|"COMPLETED")} status - The current processing status of the batch.
+ * @property {("CREATED"|"PREPARING"|"PREPARED"|"PROCESSING"|"COMPLETED"|"FAILED")} status - The current processing status of the batch.
  * @property {(string|null)} [output_url] - The URL to download the result xlsx file. Present when the batch has completed.
  * @property {(string|null)} [preview_url] - The URL to download the validated drafts JSON. Included after prepare has completed.
  * @property {(string|null)} [error_message] - The failure reason when prepare or processing did not complete. Included when a background job failed.
  * @property {number} created_at - The timestamp when the batch was created.
+ * @property {boolean} awaiting_authorization - True when any payout in this batch is still in the requested state.
  */
 
 /**
@@ -1253,7 +1258,9 @@ import { Client } from 'webfunction';
  * @property {number} created_at - The timestamp when the dispute was created.
  * @property {Array<FeeAttributes>} fees - The fees associated with the dispute.
  * @property {(true|false)} conceded - Whether the dispute has been conceded by the merchant. This can be true only when the dispute is in the LOST state.
+ * @property {(true|false)} challenge_fee_waived - Whether the challenge fee is waived for this dispute.
  * @property {Array<DisputeEvidenceAttributes>} evidences - The evidence submitted for this dispute.
+ * @property {Array<EntryAttributes>} entries - The merchant ledger entries associated with this dispute.
  */
 
 /**
@@ -2701,8 +2708,10 @@ import { Client } from 'webfunction';
  * 
  * Cancels a payment that should not go through. The customer is not charged for a cancelled payment.
  * 
- * Payments in a `PENDING` status, and payments in a `SUCCESSFUL` status that have not been
- * settled yet, can be cancelled. Once a payment is cancelled, its status changes to `CANCELLED`.
+ * Payments in a `PENDING` status, payments in an `AUTHORIZED` status whose authorization has not
+ * expired yet, and payments in a `SUCCESSFUL` status that have not been settled yet, can be
+ * cancelled. Cancelling an `AUTHORIZED` payment releases the hold on the customer's funds. Once a
+ * payment is cancelled, its status changes to `CANCELLED`.
  * @property {(args: CapturePaymentArgs) => Promise<boolean>} capturePayment - ## Capture payment
  * 
  * Captures a previously authorized payment. Capture is the second step of a two-step payment flow
@@ -2844,14 +2853,14 @@ import { Client } from 'webfunction';
  * 
  * This endpoint provides comprehensive search functionality using the SearchIndex infrastructure,
  * allowing you to filter payouts by various criteria including status, payout method, currency,
- * amount ranges, and date ranges.
+ * batch, amount ranges, and date ranges.
  * 
  * The response includes pagination controls with `previous` and `next` cursors that can be used
  * to navigate through the payout history efficiently.
  * 
  * ### Features:
  * - **Full-text search**: Search across payout content
- * - **Advanced filtering**: Filter by status, payout method, currency, amount, and dates
+ * - **Advanced filtering**: Filter by status, payout method, currency, batch, amount, and dates
  * - **Date range support**: Support for specific dates, datetimes, date ranges, datetime ranges, and keywords
  * - **Pagination**: Efficient cursor-based pagination
  * - **Merchant-scoped**: Only returns payouts for the authenticated merchant
@@ -2889,7 +2898,7 @@ import { Client } from 'webfunction';
  * 
  * Retrieve a batch by ID, including its current status, any prepare or processing error,
  * the preview download URL when prepare has completed, and the result download URL when
- * processing has completed.
+ * processing has completed. `awaiting_authorization` is true when any payout in the batch is still requested.
  * @property {(args?: FindCardArgs) => Promise<FindCardResult>} findCard - ## Find card
  * 
  * Find a card by its ID or token. Either card_id or token must be provided.
@@ -3027,6 +3036,8 @@ import { Client } from 'webfunction';
  * @property {(args?: ListBatchesArgs) => Promise<ListBatchesPage>} listBatches - ## List batches
  * 
  * Returns a paginated list of batches for the authenticated merchant, newest first.
+ * A caller only receives batch types their permissions allow.
+ * `awaiting_authorization` is true when any payout in the batch is still requested.
  * 
  * Optionally filter by `type` to return only batches of that kind (for example `PAYMENT_LINK`).
  * @property {(args?: any) => Promise<Array<CommunicationChannelAttributes>>} listCommunicationChannels - ## List communication channels
@@ -4182,16 +4193,19 @@ export async function createClient(options = {}) {
      *
      * Cancels a payment that should not go through. The customer is not charged for a cancelled payment.
      *
-     * Payments in a `PENDING` status, and payments in a `SUCCESSFUL` status that have not been
-     * settled yet, can be cancelled. Once a payment is cancelled, its status changes to `CANCELLED`.
+     * Payments in a `PENDING` status, payments in an `AUTHORIZED` status whose authorization has not
+     * expired yet, and payments in a `SUCCESSFUL` status that have not been settled yet, can be
+     * cancelled. Cancelling an `AUTHORIZED` payment releases the hold on the customer's funds. Once a
+     * payment is cancelled, its status changes to `CANCELLED`.
      *
      * @param {CancelPaymentArgs} args
      * @returns {Promise<boolean>}
      * @throws {import('webfunction').BadRequestError} NOT_FOUND - This error occurs when no payment with the provided ID exists in your
      * merchant account. Double check that you're using the correct payment ID.
      * @throws {import('webfunction').BadRequestError} NOT_CANCELLABLE - Payment is not eligible for cancellation. This can happen if the payment is
-     * not in a `PENDING` or `SUCCESSFUL` status, has already been settled, or its
-     * payment method does not support cancellations.
+     * not in a `PENDING`, `AUTHORIZED` or `SUCCESSFUL` status, its authorization has
+     * expired, it has already been settled, or its payment method does not support
+     * cancellations.
      * @throws {import('webfunction').UnexpectedStatusCodeError} Non-200, non-400 response.
      * @throws {import('webfunction').JsonParseError} Response body wasn't valid JSON.
      */
@@ -4571,14 +4585,14 @@ export async function createClient(options = {}) {
      *
      * This endpoint provides comprehensive search functionality using the SearchIndex infrastructure,
      * allowing you to filter payouts by various criteria including status, payout method, currency,
-     * amount ranges, and date ranges.
+     * batch, amount ranges, and date ranges.
      *
      * The response includes pagination controls with `previous` and `next` cursors that can be used
      * to navigate through the payout history efficiently.
      *
      * ### Features:
      * - **Full-text search**: Search across payout content
-     * - **Advanced filtering**: Filter by status, payout method, currency, amount, and dates
+     * - **Advanced filtering**: Filter by status, payout method, currency, batch, amount, and dates
      * - **Date range support**: Support for specific dates, datetimes, date ranges, datetime ranges, and keywords
      * - **Pagination**: Efficient cursor-based pagination
      * - **Merchant-scoped**: Only returns payouts for the authenticated merchant
@@ -4662,7 +4676,7 @@ export async function createClient(options = {}) {
      *
      * Retrieve a batch by ID, including its current status, any prepare or processing error,
      * the preview download URL when prepare has completed, and the result download URL when
-     * processing has completed.
+     * processing has completed. `awaiting_authorization` is true when any payout in the batch is still requested.
      *
      * @param {FindBatchArgs} args
      * @returns {Promise<FindBatchResult>}
@@ -5138,6 +5152,8 @@ export async function createClient(options = {}) {
      * ## List batches
      *
      * Returns a paginated list of batches for the authenticated merchant, newest first.
+     * A caller only receives batch types their permissions allow.
+     * `awaiting_authorization` is true when any payout in the batch is still requested.
      *
      * Optionally filter by `type` to return only batches of that kind (for example `PAYMENT_LINK`).
      *
